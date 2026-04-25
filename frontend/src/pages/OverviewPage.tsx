@@ -96,7 +96,6 @@ export default function OverviewPage() {
         }, 2000)
       })
 
-      await runAnalysis()
       setMsg('Demo data generated and analyzed successfully!')
       load()
     } catch (e: unknown) {

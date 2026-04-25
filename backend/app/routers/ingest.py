@@ -8,6 +8,9 @@ from app.models.dns_event import DnsEvent
 from app.services.parser import parse_dns_logs
 from app.services.normalizer import bulk_insert_events, clear_events
 from app.services.enricher import seed_demo_subnet_context
+from app.services.correlator import run_correlation
+from app.services.enricher import run_enrichment
+from app.services.recommender import run_recommendations
 from app.fixtures.generator import generate_csv
 
 router = APIRouter(prefix="/api/v1/ingest", tags=["ingest"])
@@ -16,7 +19,7 @@ _jobs: dict[str, dict] = {}
 
 
 async def _run_generate_demo(job_id: str) -> None:
-    _jobs[job_id] = {"status": "running", "events_inserted": 0, "error": None}
+    _jobs[job_id] = {"status": "running", "phase": "generating", "events_inserted": 0, "error": None}
     try:
         async with AsyncSessionLocal() as db:
             await clear_events(db)
@@ -24,9 +27,15 @@ async def _run_generate_demo(job_id: str) -> None:
             csv_content = generate_csv(days=90, clients_per_subnet=50)
             events = parse_dns_logs(csv_content)
             inserted = await bulk_insert_events(db, events)
-        _jobs[job_id] = {"status": "done", "events_inserted": inserted, "error": None}
+        _jobs[job_id]["phase"] = "analyzing"
+        _jobs[job_id]["events_inserted"] = inserted
+        async with AsyncSessionLocal() as db:
+            await run_correlation(db)
+            await run_enrichment(db)
+            await run_recommendations(db)
+        _jobs[job_id] = {"status": "done", "phase": "complete", "events_inserted": inserted, "error": None}
     except Exception as e:
-        _jobs[job_id] = {"status": "error", "events_inserted": 0, "error": str(e)}
+        _jobs[job_id] = {"status": "error", "phase": "failed", "events_inserted": 0, "error": str(e)}
 
 
 @router.post("")

@@ -17,10 +17,8 @@ export default function App() {
           style={{ backgroundColor: '#172628', height: '48px' }}
         >
           <div className="flex items-center gap-3">
-            {/* Infoblox wordmark */}
-            <svg width="90" height="18" viewBox="0 0 90 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <text x="0" y="14" fontFamily="Inter,sans-serif" fontSize="14" fontWeight="700" fill="white" letterSpacing="-0.3">infoblox</text>
-            </svg>
+            {/* Infoblox logo */}
+            <img src="/infoblox-logo.svg" alt="Infoblox" style={{ width: '100px', height: '22px', objectFit: 'contain' }} />
             <span style={{ color: 'rgba(255,255,255,0.35)' }}>|</span>
             <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.85)' }}>Mosaic</span>
           </div>

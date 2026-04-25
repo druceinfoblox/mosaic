@@ -1,9 +1,13 @@
 import uuid
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.database import get_db, AsyncSessionLocal
+
+_executor = ThreadPoolExecutor(max_workers=2)
 from app.models.dns_event import DnsEvent
 from app.services.parser import parse_dns_logs
 from app.services.normalizer import bulk_insert_events, clear_events
@@ -21,11 +25,13 @@ _jobs: dict[str, dict] = {}
 async def _run_generate_demo(job_id: str) -> None:
     _jobs[job_id] = {"status": "running", "phase": "generating", "events_inserted": 0, "error": None}
     try:
+        # Run CPU-heavy generation in thread pool so event loop stays free
+        loop = asyncio.get_event_loop()
+        csv_content = await loop.run_in_executor(_executor, lambda: generate_csv(days=90, clients_per_subnet=50))
+        events = await loop.run_in_executor(_executor, lambda: parse_dns_logs(csv_content))
         async with AsyncSessionLocal() as db:
             await clear_events(db)
             await seed_demo_subnet_context(db)
-            csv_content = generate_csv(days=90, clients_per_subnet=50)
-            events = parse_dns_logs(csv_content)
             inserted = await bulk_insert_events(db, events)
         _jobs[job_id]["phase"] = "analyzing"
         _jobs[job_id]["events_inserted"] = inserted

@@ -9,6 +9,11 @@ from app.database import get_db, AsyncSessionLocal
 
 _executor = ThreadPoolExecutor(max_workers=2)
 from app.models.dns_event import DnsEvent
+from app.models.client_profile import ClientProfile
+from app.models.fqdn_profile import FqdnProfile
+from app.models.dependency import Dependency
+from app.models.recommendation import Recommendation
+from sqlalchemy import delete
 from app.services.parser import parse_dns_logs
 from app.services.normalizer import bulk_insert_events, clear_events
 from app.services.enricher import seed_demo_subnet_context
@@ -73,6 +78,14 @@ async def generate_demo_status(job_id: str):
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+
+@router.delete("/reset")
+async def reset_database(db: AsyncSession = Depends(get_db)):
+    for model in [Recommendation, Dependency, FqdnProfile, ClientProfile, DnsEvent]:
+        await db.execute(delete(model))
+    await db.commit()
+    return {"status": "ok", "message": "Database cleared"}
 
 
 @router.get("/status")

@@ -25,6 +25,9 @@ export const generateDemoStatus = (jobId: string) =>
     `/ingest/generate-demo/status/${jobId}`,
   )
 
+export const resetDatabase = () =>
+  api.delete<{ status: string; message: string }>('/ingest/reset')
+
 export const runAnalysis = () =>
   api.post<{ status: string; correlation: unknown; enrichment: unknown; recommendations: unknown }>('/analyze')
 

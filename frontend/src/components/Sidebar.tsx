@@ -6,87 +6,51 @@ import {
   Server,
   Upload,
   AlertTriangle,
-  Shield,
 } from 'lucide-react'
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Overview' },
-  { path: '/explorer', icon: Network, label: 'Dependency Explorer' },
-  { path: '/recommendations', icon: ListChecks, label: 'Recommendations' },
+  { path: '/explorer', icon: Network, label: 'Explorer' },
+  { path: '/recommendations', icon: ListChecks, label: 'Recommend.' },
   { path: '/workloads', icon: Server, label: 'Workloads' },
-  { path: '/publish', icon: Upload, label: 'Publish to Illumio' },
-  { path: '/ambiguity', icon: AlertTriangle, label: 'Ambiguity Queue' },
+  { path: '/publish', icon: Upload, label: 'Publish' },
+  { path: '/ambiguity', icon: AlertTriangle, label: 'Ambiguity' },
 ]
+
+const itemClass = (isActive: boolean) =>
+  `w-full flex flex-col items-center justify-center py-2.5 px-1 transition-colors cursor-pointer ${
+    isActive
+      ? 'text-white'
+      : 'hover:bg-black/5'
+  }`
 
 export default function Sidebar() {
   return (
     <aside
-      className="w-64 flex-shrink-0 flex flex-col h-screen overflow-hidden"
-      style={{ background: '#1a2332' }}
+      className="flex flex-col h-full border-r shrink-0"
+      style={{ backgroundColor: '#E9EFE6', borderColor: '#d4ddd0', width: '5.5rem' }}
     >
-      {/* Logo */}
-      <div className="p-5 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: '#0066cc' }}
-          >
-            <Shield size={18} className="text-white" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-white font-bold text-sm leading-tight">Mosaic</div>
-            <div className="text-xs leading-tight" style={{ color: '#7aadda' }}>
-              DNS → Microsegmentation
-            </div>
-          </div>
-        </div>
-        <div className="mt-3 text-xs" style={{ color: '#4a6480' }}>
-          Powered by Infoblox DNS
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 flex flex-col items-center py-3 gap-0.5">
         {navItems.map(({ path, icon: Icon, label }) => (
           <NavLink
             key={path}
             to={path}
             end={path === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                isActive
-                  ? 'text-white font-medium'
-                  : 'hover:text-white'
-              }`
-            }
+            className={({ isActive }) => itemClass(isActive)}
             style={({ isActive }) => ({
-              background: isActive ? '#0066cc' : 'transparent',
-              color: isActive ? '#ffffff' : '#8fa3b8',
+              background: isActive ? '#1F6FE0' : undefined,
+              color: isActive ? '#ffffff' : '#5a6e60',
             })}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget
-              if (!el.classList.contains('active')) {
-                el.style.background = 'rgba(255,255,255,0.08)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget
-              if (!el.dataset.active) {
-                el.style.background = 'transparent'
-              }
-            }}
           >
-            <Icon size={16} />
-            <span>{label}</span>
+            <Icon size={20} className="mb-1" />
+            <span style={{ fontSize: '10px', lineHeight: '1.2', fontWeight: 500, textAlign: 'center' }}>
+              {label}
+            </span>
           </NavLink>
         ))}
       </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-white/10">
-        <div className="text-xs" style={{ color: '#4a6480' }}>
-          Mosaic v0.1.0
-        </div>
+      <div className="py-3 border-t text-center" style={{ borderColor: '#d4ddd0' }}>
+        <span style={{ fontSize: '10px', color: '#8fa897' }}>v0.1.0</span>
       </div>
     </aside>
   )

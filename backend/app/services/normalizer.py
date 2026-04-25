@@ -18,7 +18,7 @@ def is_private_ip(ip: str) -> bool:
     return bool(INTERNAL_IP_RE.match(ip))
 
 
-async def bulk_insert_events(db: AsyncSession, events: list[DnsEventCreate]) -> int:
+async def bulk_insert_events(db: AsyncSession, events: list[DnsEventCreate], chunk_size: int = 2000) -> int:
     db_events = [
         DnsEvent(
             timestamp=e.timestamp,
@@ -34,8 +34,9 @@ async def bulk_insert_events(db: AsyncSession, events: list[DnsEventCreate]) -> 
         for e in events
         if e.client_ip and e.fqdn
     ]
-    db.add_all(db_events)
-    await db.commit()
+    for i in range(0, len(db_events), chunk_size):
+        db.add_all(db_events[i:i + chunk_size])
+        await db.commit()
     return len(db_events)
 
 

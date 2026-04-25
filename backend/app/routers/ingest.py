@@ -27,7 +27,7 @@ async def _run_generate_demo(job_id: str) -> None:
     try:
         # Run CPU-heavy generation in thread pool so event loop stays free
         loop = asyncio.get_event_loop()
-        csv_content = await loop.run_in_executor(_executor, lambda: generate_csv(days=90, clients_per_subnet=50))
+        csv_content = await loop.run_in_executor(_executor, lambda: generate_csv(days=30, clients_per_subnet=10))
         events = await loop.run_in_executor(_executor, lambda: parse_dns_logs(csv_content))
         async with AsyncSessionLocal() as db:
             await clear_events(db)

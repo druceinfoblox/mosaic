@@ -1,7 +1,9 @@
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+import uuid
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from app.database import get_db
+from app.database import get_db, AsyncSessionLocal
 from app.models.dns_event import DnsEvent
 from app.services.parser import parse_dns_logs
 from app.services.normalizer import bulk_insert_events, clear_events
@@ -9,6 +11,22 @@ from app.services.enricher import seed_demo_subnet_context
 from app.fixtures.generator import generate_csv
 
 router = APIRouter(prefix="/api/v1/ingest", tags=["ingest"])
+
+_jobs: dict[str, dict] = {}
+
+
+async def _run_generate_demo(job_id: str) -> None:
+    _jobs[job_id] = {"status": "running", "events_inserted": 0, "error": None}
+    try:
+        async with AsyncSessionLocal() as db:
+            await clear_events(db)
+            await seed_demo_subnet_context(db)
+            csv_content = generate_csv(days=90, clients_per_subnet=50)
+            events = parse_dns_logs(csv_content)
+            inserted = await bulk_insert_events(db, events)
+        _jobs[job_id] = {"status": "done", "events_inserted": inserted, "error": None}
+    except Exception as e:
+        _jobs[job_id] = {"status": "error", "events_inserted": 0, "error": str(e)}
 
 
 @router.post("")
@@ -27,20 +45,19 @@ async def ingest_file(file: UploadFile = File(...), db: AsyncSession = Depends(g
     return {"status": "ok", "parsed": len(events), "inserted": inserted, "filename": file.filename}
 
 
-@router.post("/generate-demo")
-async def generate_demo(db: AsyncSession = Depends(get_db)):
-    await clear_events(db)
-    await seed_demo_subnet_context(db)
+@router.post("/generate-demo", status_code=202)
+async def generate_demo(background_tasks: BackgroundTasks):
+    job_id = str(uuid.uuid4())
+    background_tasks.add_task(_run_generate_demo, job_id)
+    return {"status": "started", "job_id": job_id}
 
-    csv_content = generate_csv(days=90, clients_per_subnet=50)
-    events = parse_dns_logs(csv_content)
-    inserted = await bulk_insert_events(db, events)
-    return {
-        "status": "ok",
-        "message": "Demo data generated",
-        "events_parsed": len(events),
-        "events_inserted": inserted,
-    }
+
+@router.get("/generate-demo/status/{job_id}")
+async def generate_demo_status(job_id: str):
+    job = _jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
 
 
 @router.get("/status")

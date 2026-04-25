@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getOverview, generateDemo, runAnalysis } from '../api/client'
+import { getOverview, generateDemo, generateDemoStatus, runAnalysis } from '../api/client'
 import type { Overview } from '../types'
 import {
   Database,
@@ -73,9 +73,29 @@ export default function OverviewPage() {
 
   const handleGenerateDemo = async () => {
     setRunning(true)
-    setMsg(null)
+    setMsg('Generating demo data...')
     try {
-      await generateDemo()
+      const { data } = await generateDemo()
+      const jobId = data.job_id
+
+      await new Promise<void>((resolve, reject) => {
+        const poll = setInterval(async () => {
+          try {
+            const { data: job } = await generateDemoStatus(jobId)
+            if (job.status === 'done') {
+              clearInterval(poll)
+              resolve()
+            } else if (job.status === 'error') {
+              clearInterval(poll)
+              reject(new Error(job.error ?? 'Unknown error'))
+            }
+          } catch (e) {
+            clearInterval(poll)
+            reject(e)
+          }
+        }, 2000)
+      })
+
       await runAnalysis()
       setMsg('Demo data generated and analyzed successfully!')
       load()

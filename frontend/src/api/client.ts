@@ -8,7 +8,7 @@ import type {
   PaginatedResponse,
 } from '../types'
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1'
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api/v1'
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -18,7 +18,12 @@ export const api = axios.create({
 export const getOverview = () => api.get<Overview>('/overview')
 
 export const generateDemo = () =>
-  api.post<{ status: string; message: string; events_inserted: number }>('/ingest/generate-demo')
+  api.post<{ status: string; job_id: string }>('/ingest/generate-demo')
+
+export const generateDemoStatus = (jobId: string) =>
+  api.get<{ status: string; events_inserted: number; error: string | null }>(
+    `/ingest/generate-demo/status/${jobId}`,
+  )
 
 export const runAnalysis = () =>
   api.post<{ status: string; correlation: unknown; enrichment: unknown; recommendations: unknown }>('/analyze')
